@@ -165,20 +165,35 @@ func resourceStorageBucketObject() *schema.Resource {
 			},
 
 			"customer_encryption": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeList,
+				MaxItems:    1,
 				Optional:    true,
-				ForceNew:    true,
 				Sensitive:   true,
-				Description: `Base64 encoded customer supplied encryption key.`,
-				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
-					decodedKey, err := base64.StdEncoding.DecodeString(val.(string))
-					if err != nil {
-						errs = append(errs, fmt.Errorf("Failed to decode (base64) customer_encryption, expecting valid base64 encoded key"))
-					}
-					if len(decodedKey) != 32 {
-						errs = append(errs, fmt.Errorf("Wrong customer_encryption key provided: not a 32-byte AES-256 key"))
-					}
-					return
+				Description: `SHA256 hash value of the encryption key; encoded using base64.`,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"encryption_algorithm": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "AES256",
+							ForceNew:    true,
+							Description: `The encryption algorithm. Default: AES256`,
+						},
+						"key_sha256": {
+							Type:        schema.TypeString,
+							Required:    true,
+							ForceNew:    true,
+							Sensitive:   true,
+							Description: `Base64 encoded customer supplied encryption key.`,
+							ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
+								_, err := base64.StdEncoding.DecodeString(val.(string))
+								if err != nil {
+									errs = append(errs, fmt.Errorf("Failed to decode (base64) customer_encryption, expecting valid base64 encoded key"))
+								}
+								return
+							},
+						},
+					},
 				},
 			},
 
@@ -313,8 +328,10 @@ func resourceStorageBucketObjectCreate(d *schema.ResourceData, meta interface{})
 
 	// This is done late as we need to add headers to enable customer encryption
 	if v, ok := d.GetOk("customer_encryption"); ok {
-		setEncryptionHeaders(v.(string), insertCall.Header())
+		customerEncryption := expandCustomerEncryption(v.([]interface{}))
+		setEncryptionHeaders(customerEncryption, insertCall.Header())
 	}
+
 	_, err = insertCall.Do()
 
 	if err != nil {
@@ -376,7 +393,8 @@ func resourceStorageBucketObjectRead(d *schema.ResourceData, meta interface{}) e
 	getCall := objectsService.Get(bucket, name)
 
 	if v, ok := d.GetOk("customer_encryption"); ok {
-		setEncryptionHeaders(v.(string), getCall.Header())
+		customerEncryption := expandCustomerEncryption(v.([]interface{}))
+		setEncryptionHeaders(customerEncryption, getCall.Header())
 	}
 
 	res, err := getCall.Do()
@@ -469,11 +487,11 @@ func resourceStorageBucketObjectDelete(d *schema.ResourceData, meta interface{})
 	return nil
 }
 
-func setEncryptionHeaders(customer_key string, headers http.Header) {
-	decodedKey, _ := base64.StdEncoding.DecodeString(customer_key)
+func setEncryptionHeaders(customerEncryption map[string]string, headers http.Header) {
+	decodedKey, _ := base64.StdEncoding.DecodeString(customerEncryption["key_sha256"])
 	keyHash := sha256.Sum256(decodedKey)
-	headers.Set("x-goog-encryption-algorithm", "AES256")
-	headers.Set("x-goog-encryption-key", customer_key)
+	headers.Set("x-goog-encryption-algorithm", customerEncryption["encryption_algorithm"])
+	headers.Set("x-goog-encryption-key", customerEncryption["key_sha256"])
 	headers.Set("x-goog-encryption-key-sha256", base64.StdEncoding.EncodeToString(keyHash[:]))
 }
 
@@ -492,4 +510,17 @@ func getContentMd5Hash(content []byte) string {
 		log.Printf("[WARN] Failed to compute md5 hash for content: %v", err)
 	}
 	return base64.StdEncoding.EncodeToString(h.Sum(nil))
+}
+
+func expandCustomerEncryption(input []interface{}) map[string]string {
+	expanded := make(map[string]string)
+	if input == nil {
+		return expanded
+	}
+	for _, v := range input {
+		original := v.(map[string]interface{})
+		expanded["key_sha256"] = original["key_sha256"].(string)
+		expanded["encryption_algorithm"] = original["encryption_algorithm"].(string)
+	}
+	return expanded
 }
