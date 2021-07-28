@@ -179,7 +179,7 @@ func resourceStorageBucketObject() *schema.Resource {
 							ForceNew:    true,
 							Description: `The encryption algorithm. Default: AES256`,
 						},
-						"key_sha256": {
+						"encryption_key": {
 							Type:        schema.TypeString,
 							Required:    true,
 							ForceNew:    true,
@@ -488,10 +488,10 @@ func resourceStorageBucketObjectDelete(d *schema.ResourceData, meta interface{})
 }
 
 func setEncryptionHeaders(customerEncryption map[string]string, headers http.Header) {
-	decodedKey, _ := base64.StdEncoding.DecodeString(customerEncryption["key_sha256"])
+	decodedKey, _ := base64.StdEncoding.DecodeString(customerEncryption["encryption_key"])
 	keyHash := sha256.Sum256(decodedKey)
 	headers.Set("x-goog-encryption-algorithm", customerEncryption["encryption_algorithm"])
-	headers.Set("x-goog-encryption-key", customerEncryption["key_sha256"])
+	headers.Set("x-goog-encryption-key", customerEncryption["encryption_key"])
 	headers.Set("x-goog-encryption-key-sha256", base64.StdEncoding.EncodeToString(keyHash[:]))
 }
 
@@ -519,7 +519,7 @@ func expandCustomerEncryption(input []interface{}) map[string]string {
 	}
 	for _, v := range input {
 		original := v.(map[string]interface{})
-		expanded["key_sha256"] = original["key_sha256"].(string)
+		expanded["encryption_key"] = original["encryption_key"].(string)
 		expanded["encryption_algorithm"] = original["encryption_algorithm"].(string)
 	}
 	return expanded

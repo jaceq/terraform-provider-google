@@ -342,7 +342,7 @@ func TestAccStorageObject_customerEncryption(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5, customerEncryptionKey),
 					resource.TestCheckResourceAttr(
-						"google_storage_bucket_object.object", "customer_encryption.0.key_sha256", customerEncryptionKey),
+						"google_storage_bucket_object.object", "customer_encryption.0.encryption_key", customerEncryptionKey),
 				),
 			},
 		},
@@ -569,7 +569,7 @@ resource "google_storage_bucket_object" "object" {
   bucket              = google_storage_bucket.bucket.name
   content             = "%s"
   customer_encryption {
-    key_sha256 = "%s"
+    encryption_key = "%s"
   }
 }
 `, bucketName, objectName, content, customerEncryptionKey)
