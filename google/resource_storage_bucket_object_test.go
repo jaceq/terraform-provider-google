@@ -43,7 +43,7 @@ func TestAccStorageObject_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testGoogleStorageBucketsObjectBasic(bucketName, testFile.Name()),
-				Check:  testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5, ""),
+				Check:  testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5),
 			},
 		},
 	})
@@ -78,7 +78,7 @@ func TestAccStorageObject_recreate(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testGoogleStorageBucketsObjectBasic(bucketName, testFile.Name()),
-				Check:  testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5, ""),
+				Check:  testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5),
 			},
 			{
 				PreConfig: func() {
@@ -88,7 +88,7 @@ func TestAccStorageObject_recreate(t *testing.T) {
 					}
 				},
 				Config: testGoogleStorageBucketsObjectBasic(bucketName, testFile.Name()),
-				Check:  testAccCheckGoogleStorageObject(t, bucketName, objectName, updatedDataMd5, ""),
+				Check:  testAccCheckGoogleStorageObject(t, bucketName, objectName, updatedDataMd5),
 			},
 		},
 	})
@@ -117,7 +117,7 @@ func TestAccStorageObject_content(t *testing.T) {
 			{
 				Config: testGoogleStorageBucketsObjectContent(bucketName),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5, ""),
+					testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5),
 					resource.TestCheckResourceAttr(
 						"google_storage_bucket_object.object", "content_type", "text/plain; charset=utf-8"),
 					resource.TestCheckResourceAttr(
@@ -153,7 +153,7 @@ func TestAccStorageObject_withContentCharacteristics(t *testing.T) {
 				Config: testGoogleStorageBucketsObjectOptionalContentFields(
 					bucketName, disposition, encoding, language, content_type),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5, ""),
+					testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5),
 					resource.TestCheckResourceAttr(
 						"google_storage_bucket_object.object", "content_disposition", disposition),
 					resource.TestCheckResourceAttr(
@@ -213,7 +213,7 @@ func TestAccStorageObject_cacheControl(t *testing.T) {
 			{
 				Config: testGoogleStorageBucketsObjectCacheControl(bucketName, testFile.Name(), cacheControl),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5, ""),
+					testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5),
 					resource.TestCheckResourceAttr(
 						"google_storage_bucket_object.object", "cache_control", cacheControl),
 				),
@@ -246,7 +246,7 @@ func TestAccStorageObject_storageClass(t *testing.T) {
 			{
 				Config: testGoogleStorageBucketsObjectStorageClass(bucketName, storageClass),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5, ""),
+					testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5),
 					resource.TestCheckResourceAttr(
 						"google_storage_bucket_object.object", "storage_class", storageClass),
 				),
@@ -278,7 +278,7 @@ func TestAccStorageObject_metadata(t *testing.T) {
 			{
 				Config: testGoogleStorageBucketsObjectMetadata(bucketName),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5, ""),
+					testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5),
 					resource.TestCheckResourceAttr(
 						"google_storage_bucket_object.object", "metadata.customKey", "custom_value"),
 				),
@@ -310,7 +310,7 @@ func TestAccStorageObjectKms(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testGoogleStorageBucketsObjectKms(bucketName, testFile.Name(), kms.CryptoKey.Name),
-				Check:  testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5, ""),
+				Check:  testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5),
 			},
 		},
 	})
@@ -340,7 +340,7 @@ func TestAccStorageObject_customerEncryption(t *testing.T) {
 			{
 				Config: testGoogleStorageBucketsObjectCustomerEncryption(bucketName, customerEncryptionKey),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5, customerEncryptionKey),
+					testAccCheckGoogleStorageObjectWithEncryption(t, bucketName, objectName, dataMd5, customerEncryptionKey),
 					resource.TestCheckResourceAttr(
 						"google_storage_bucket_object.object", "customer_encryption.0.encryption_key", customerEncryptionKey),
 				),
@@ -372,7 +372,7 @@ func TestAccStorageObject_holds(t *testing.T) {
 			{
 				Config: testGoogleStorageBucketsObjectHolds(bucketName, true, true),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5, ""),
+					testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5),
 					resource.TestCheckResourceAttr(
 						"google_storage_bucket_object.object", "event_based_hold", "true"),
 					resource.TestCheckResourceAttr(
@@ -382,7 +382,7 @@ func TestAccStorageObject_holds(t *testing.T) {
 			{
 				Config: testGoogleStorageBucketsObjectHolds(bucketName, false, false),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5, ""),
+					testAccCheckGoogleStorageObject(t, bucketName, objectName, dataMd5),
 					resource.TestCheckResourceAttr(
 						"google_storage_bucket_object.object", "event_based_hold", "false"),
 					resource.TestCheckResourceAttr(
@@ -393,7 +393,11 @@ func TestAccStorageObject_holds(t *testing.T) {
 	})
 }
 
-func testAccCheckGoogleStorageObject(t *testing.T, bucket, object, md5 string, customerEncryptionKey string) resource.TestCheckFunc {
+func testAccCheckGoogleStorageObject(t *testing.T, bucket, object, md5 string) resource.TestCheckFunc {
+	return testAccCheckGoogleStorageObjectWithEncryption(t, bucket, object, md5, "")
+}
+
+func testAccCheckGoogleStorageObjectWithEncryption(t *testing.T, bucket, object, md5 string, customerEncryptionKey string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		config := googleProviderConfig(t)
 

@@ -160,16 +160,18 @@ func resourceStorageBucketObject() *schema.Resource {
 				Optional:         true,
 				ForceNew:         true,
 				Computed:         true,
+				ConflictsWith:    []string{"customer_encryption"},
 				DiffSuppressFunc: compareCryptoKeyVersions,
 				Description:      `Resource name of the Cloud KMS key that will be used to encrypt the object. Overrides the object metadata's kmsKeyName value, if any.`,
 			},
 
 			"customer_encryption": {
-				Type:        schema.TypeList,
-				MaxItems:    1,
-				Optional:    true,
-				Sensitive:   true,
-				Description: `SHA256 hash value of the encryption key; encoded using base64.`,
+				Type:          schema.TypeList,
+				MaxItems:      1,
+				Optional:      true,
+				Sensitive:     true,
+				ConflictsWith: []string{"kms_key_name"},
+				Description:   `Encryption key; encoded using base64.`,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"encryption_algorithm": {
